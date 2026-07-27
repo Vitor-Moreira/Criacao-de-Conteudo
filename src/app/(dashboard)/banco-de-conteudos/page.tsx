@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { networkLabels, formatLabels } from "@/lib/reference-profile-labels";
+import { mediaProxyUrl } from "@/lib/media-proxy";
 
 const RESULTS_LIMIT = 60;
 
@@ -243,7 +244,7 @@ export default async function BancoDeConteudosPage({
                     {thumbnail ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={thumbnail}
+                        src={mediaProxyUrl(thumbnail)}
                         alt={post.caption ?? "Conteúdo"}
                         className="h-full w-full object-cover"
                       />

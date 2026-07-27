@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 import { networkLabels, formatLabels } from "@/lib/reference-profile-labels";
 import { addPostToCollectionsAction } from "@/server/actions/collections";
+import { mediaProxyUrl } from "@/lib/media-proxy";
 
 export default async function ContentPostDetailPage({
   params,
@@ -71,10 +72,19 @@ export default async function ContentPostDetailPage({
           <Card className="overflow-hidden py-0">
             <div className="relative flex max-h-[720px] w-full items-center justify-center bg-black">
               {isVideo && videoUrl ? (
-                <video controls poster={imageUrl} src={videoUrl} className="max-h-[720px] w-full" />
+                <video
+                  controls
+                  poster={imageUrl ? mediaProxyUrl(imageUrl) : undefined}
+                  src={mediaProxyUrl(videoUrl)}
+                  className="max-h-[720px] w-full"
+                />
               ) : imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={imageUrl} alt={post.caption ?? "Conteúdo"} className="max-h-[720px] w-full object-contain" />
+                <img
+                  src={mediaProxyUrl(imageUrl)}
+                  alt={post.caption ?? "Conteúdo"}
+                  className="max-h-[720px] w-full object-contain"
+                />
               ) : (
                 <div className="flex h-64 w-full items-center justify-center text-sm text-muted-foreground">
                   Sem mídia disponível.
