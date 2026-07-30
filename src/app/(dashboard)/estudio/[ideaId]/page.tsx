@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { getAccessibleClientIds, canAccessClient, postClientScopeFilter } from "@/lib/client-access";
@@ -18,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, X } from "lucide-react";
 import { assetTypeLabels, ideaStatusLabels, ideaStatusBadgeClass } from "@/lib/content-idea-labels";
 import { ContentIdeaEditor } from "@/components/content-ideas/content-idea-editor";
+import { GenerateAssetButton } from "@/components/content-ideas/generate-asset-button";
 
 export default async function IdeiaDetailPage({
   params,
@@ -106,15 +109,13 @@ export default async function IdeiaDetailPage({
             <CardContent>
               <p className="mb-3 text-sm text-muted-foreground">
                 A geração usa o briefing acima, os dados do cliente e os posts de referência
-                selecionados. Pode levar alguns segundos.
+                selecionados. Pode levar até 1 minuto — o botão avisa quando está processando.
               </p>
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(assetTypeLabels) as Array<keyof typeof assetTypeLabels>).map((type) => (
                   <form key={type} action={boundGenerate}>
                     <input type="hidden" name="type" value={type} />
-                    <Button type="submit" variant="outline">
-                      {assetTypeLabels[type]}
-                    </Button>
+                    <GenerateAssetButton label={assetTypeLabels[type]} />
                   </form>
                 ))}
               </div>
@@ -142,7 +143,9 @@ export default async function IdeiaDetailPage({
                         </form>
                       </div>
                     </div>
-                    <p className="mb-2 whitespace-pre-wrap text-sm">{asset.content}</p>
+                    <div className="prose prose-sm dark:prose-invert mb-2 max-w-none prose-headings:font-semibold prose-p:my-2 prose-headings:mt-4 prose-headings:mb-2 first:prose-headings:mt-0">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{asset.content}</ReactMarkdown>
+                    </div>
                     {asset.brandFitJustification && (
                       <p className="text-xs text-muted-foreground">
                         {asset.brandFitJustification}

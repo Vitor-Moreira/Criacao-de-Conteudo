@@ -25,7 +25,7 @@ const GENERATED_ASSET_TYPES: GeneratedAssetType[] = [
 
 const typeInstructions: Record<GeneratedAssetType, string> = {
   SCRIPT:
-    "Escreva um roteiro completo para um vídeo curto (Reels/TikTok/Shorts), com estrutura de gancho (os 3 primeiros segundos), desenvolvimento e call-to-action. Use quebras de linha para marcar cada cena/fala.",
+    "Escreva um roteiro completo para um vídeo curto (Reels/TikTok/Shorts), com estrutura de gancho (os 3 primeiros segundos), desenvolvimento e call-to-action. Separe claramente cada cena/fala em seções.",
   IMAGE_CONCEPT:
     "Descreva um conceito visual detalhado para uma imagem ou carrossel, servindo como briefing para o time de design ou para geração de imagem por IA (composição, cores, texto em tela, estilo).",
   COPY: "Escreva a legenda (copy) pronta para publicar, incluindo hashtags relevantes se fizer sentido.",
@@ -36,7 +36,8 @@ const typeInstructions: Record<GeneratedAssetType, string> = {
 const SYSTEM_PROMPT =
   "Você é um estrategista de conteúdo sênior de uma agência de mídias digitais. " +
   "Gere ativos de conteúdo de alta qualidade, criativos e alinhados à marca do cliente, com base no briefing fornecido. " +
-  "Responda ESTRITAMENTE em JSON válido, sem markdown e sem texto fora do JSON.";
+  "Formate o campo \"content\" usando Markdown (títulos com ##, negrito com **texto**, listas com - ou números, e linhas em branco entre seções) para que fique bem diagramado e fácil de ler, em vez de um bloco de texto corrido. " +
+  "Responda ESTRITAMENTE em JSON válido (o valor de \"content\" é uma string Markdown dentro do JSON, com quebras de linha escapadas como \\n), sem markdown fora da string e sem texto fora do objeto JSON.";
 
 function formToIdeaInput(formData: FormData) {
   return {
@@ -262,28 +263,45 @@ ${sourcePostsBlock}
 ## Tarefa
 ${typeInstructions[type]}
 
-Responda ESTRITAMENTE em JSON, sem markdown, sem texto fora do JSON, no formato exato:
-{"content": "<o ativo gerado>", "brandFitScore": <número inteiro de 0 a 100 avaliando o alinhamento do conteúdo gerado ao tom de voz e pilares do cliente>, "brandFitJustification": "<justificativa breve da nota, 1-2 frases>"}
+Responda ESTRITAMENTE em JSON, sem texto fora do objeto JSON, no formato exato:
+{"content": "<o ativo gerado, formatado em Markdown (##, **negrito**, listas), com quebras de linha escapadas como \\n>", "brandFitScore": <número inteiro de 0 a 100 avaliando o alinhamento do conteúdo gerado ao tom de voz e pilares do cliente>, "brandFitJustification": "<justificativa breve da nota, 1-2 frases>"}
 `.trim();
 }
 
-function parseGenerationResponse(raw: string) {
+function tryParseJson(text: string) {
   try {
-    const cleaned = raw.trim().replace(/^```json\s*|```$/g, "");
-    const parsed = JSON.parse(cleaned) as {
+    return JSON.parse(text) as {
       content?: unknown;
       brandFitScore?: unknown;
       brandFitJustification?: unknown;
     };
-    return {
-      content: typeof parsed.content === "string" ? parsed.content : raw,
-      brandFitScore: typeof parsed.brandFitScore === "number" ? parsed.brandFitScore : null,
-      brandFitJustification:
-        typeof parsed.brandFitJustification === "string" ? parsed.brandFitJustification : null,
-    };
   } catch {
+    return null;
+  }
+}
+
+function parseGenerationResponse(raw: string) {
+  const cleaned = raw.trim().replace(/^```json\s*|```$/g, "");
+
+  // Primeiro tenta o texto inteiro; se a resposta vier com algo antes/depois do
+  // objeto JSON (ou o modelo cortar antes de fechar todas as chaves por causa
+  // do limite de tokens), tenta extrair só o maior bloco {...} encontrado.
+  let parsed = tryParseJson(cleaned);
+  if (!parsed) {
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) parsed = tryParseJson(jsonMatch[0]);
+  }
+
+  if (!parsed) {
     return { content: raw, brandFitScore: null, brandFitJustification: null };
   }
+
+  return {
+    content: typeof parsed.content === "string" ? parsed.content : raw,
+    brandFitScore: typeof parsed.brandFitScore === "number" ? parsed.brandFitScore : null,
+    brandFitJustification:
+      typeof parsed.brandFitJustification === "string" ? parsed.brandFitJustification : null,
+  };
 }
 
 export async function generateAssetAction(ideaId: string, formData: FormData) {
@@ -318,7 +336,7 @@ export async function generateAssetAction(ideaId: string, formData: FormData) {
   try {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: prompt }],
     });
