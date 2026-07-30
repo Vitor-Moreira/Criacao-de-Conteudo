@@ -18,12 +18,18 @@ import type { Message, TextBlock, WebSearchToolResultBlock } from "@anthropic-ai
 export type ActionResult = { error?: string; fieldErrors?: Record<string, string> };
 
 const SYSTEM_PROMPT =
-  "Você é um analista de tendências de mídias sociais de uma agência de conteúdo. " +
-  "Use a busca na web para pesquisar tendências atuais sobre o tema informado. " +
+  "Você é um analista sênior de tendências de mídias sociais de uma agência de conteúdo. " +
+  "Use a busca na web extensivamente (múltiplas buscas, com termos variados) para pesquisar tendências atuais e o que está em alta agora sobre o tema informado, " +
+  "cobrindo especificamente Instagram, TikTok, Facebook e, quando relevante para o tema, outras redes com alto engajamento no momento (YouTube Shorts, Pinterest, LinkedIn, X, etc.). " +
+  "Priorize sempre fontes e contas que estejam demonstrando alto engajamento/viralização recente, não resultados genéricos ou desatualizados. " +
+  "Sempre que encontrar uma conta/perfil de referência, capture também a URL pública dele (perfil no Instagram, TikTok, Facebook etc.) para permitir que o usuário visite o perfil diretamente. " +
   "Ao final, responda com um bloco JSON válido (pode vir depois de texto explicativo, mas deve ser o único objeto JSON da resposta), " +
-  'no formato exato: {"summary": "<síntese executiva em 2-4 parágrafos>", "trendingFormats": ["<formato em alta 1>", "..."], ' +
-  '"recurringHooks": ["<gancho/abertura recorrente 1>", "..."], "referenceAccounts": [{"label": "<@conta ou nome>", "note": "<por que é relevante>"}], ' +
-  '"sources": [{"title": "<título>", "url": "<url>"}]}';
+  'no formato exato: {"summary": "<síntese executiva densa e aprofundada, em 6-10 parágrafos, cobrindo: contexto e panorama atual do tema; tendências emergentes por rede social (Instagram, TikTok, Facebook e outras relevantes); comportamento e expectativas da audiência; formatos e narrativas que estão performando bem; oportunidades concretas de conteúdo; e recomendações práticas e acionáveis para a agência>", ' +
+  '"trendingFormats": ["<formato em alta 1>", "..."], ' +
+  '"recurringHooks": ["<gancho/abertura recorrente 1>", "..."], ' +
+  '"referenceAccounts": [{"label": "<@conta ou nome>", "network": "<Instagram|TikTok|Facebook|Outra>", "url": "<url pública do perfil, sempre que encontrada>", "note": "<por que é relevante, com dados de engajamento quando disponíveis>"}], ' +
+  '"sources": [{"title": "<título>", "url": "<url>"}]}. ' +
+  "Não deixe a síntese curta ou superficial: aprofunde cada ponto com exemplos concretos encontrados na pesquisa.";
 
 function formToInput(formData: FormData) {
   return {
@@ -130,7 +136,7 @@ ${client ? `## Cliente\n${client.name} (${client.segment ?? "segmento não infor
 ${internalPostsBlock}
 
 ## Tarefa
-Pesquise na web tendências atuais sobre este tema para redes sociais (Instagram/TikTok/Reels), incluindo formatos em alta, ganchos/aberturas recorrentes e contas de referência. Combine com os posts internos acima quando relevante.
+Pesquise na web, de forma aprofundada e com múltiplas buscas, as tendências atuais sobre este tema em redes sociais — especificamente Instagram, TikTok e Facebook, além de qualquer outra rede que esteja em alta com alto engajamento sobre esse assunto no momento (ex: YouTube Shorts, Pinterest, X). Identifique formatos em alta, ganchos/aberturas recorrentes e contas de referência (com link do perfil sempre que possível). Produza uma síntese densa e completa, combinando os achados da web com os posts internos acima quando relevante. Não economize no nível de detalhe.
 `.trim();
 
   let summary: string;
@@ -144,9 +150,9 @@ Pesquise na web tendências atuais sobre este tema para redes sociais (Instagram
   try {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 3072,
+      max_tokens: 8192,
       system: SYSTEM_PROMPT,
-      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 5 }],
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 10 }],
       messages: [{ role: "user", content: prompt }],
     });
     inputTokens = response.usage.input_tokens ?? 0;

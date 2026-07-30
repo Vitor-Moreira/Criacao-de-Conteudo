@@ -33,7 +33,7 @@ export default async function MarketResearchDetailPage({
     ? (research.recurringHooks as string[])
     : [];
   const referenceAccounts = Array.isArray(research.referenceAccounts)
-    ? (research.referenceAccounts as { label?: string; note?: string }[])
+    ? (research.referenceAccounts as { label?: string; note?: string; network?: string; url?: string }[])
     : [];
   const sources = Array.isArray(research.sources)
     ? (research.sources as { title?: string; url?: string }[])
@@ -134,10 +134,29 @@ export default async function MarketResearchDetailPage({
               {referenceAccounts.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma conta identificada.</p>
               ) : (
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   {referenceAccounts.map((account, i) => (
                     <div key={i}>
-                      <p className="font-medium">{account.label}</p>
+                      <div className="flex items-center gap-1.5">
+                        {account.url ? (
+                          <a
+                            href={account.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 font-medium hover:underline"
+                          >
+                            {account.label}
+                            <ExternalLink className="size-3 shrink-0 text-muted-foreground" />
+                          </a>
+                        ) : (
+                          <p className="font-medium">{account.label}</p>
+                        )}
+                        {account.network && (
+                          <Badge variant="outline" className="shrink-0 text-[10px]">
+                            {account.network}
+                          </Badge>
+                        )}
+                      </div>
                       {account.note && <p className="text-xs text-muted-foreground">{account.note}</p>}
                     </div>
                   ))}
