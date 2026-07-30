@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { getAccessibleClientIds, canAccessClient } from "@/lib/client-access";
@@ -14,7 +15,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, ExternalLink, UserSearch } from "lucide-react";
+import { networkLabels, frequencyLabels } from "@/lib/reference-profile-labels";
 
 export default async function ClientDetailPage({
   params,
@@ -28,6 +30,10 @@ export default async function ClientDetailPage({
     where: { id: clientId, organizationId: session.user.organizationId },
     include: {
       knowledgeItems: { orderBy: { createdAt: "desc" } },
+      referenceProfiles: {
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { contentPosts: true } } },
+      },
     },
   });
 
@@ -51,6 +57,14 @@ export default async function ClientDetailPage({
             {client.knowledgeItems.length > 0 && (
               <Badge variant="secondary" className="ml-1.5">
                 {client.knowledgeItems.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="perfis">
+            Perfis monitorados
+            {client.referenceProfiles.length > 0 && (
+              <Badge variant="secondary" className="ml-1.5">
+                {client.referenceProfiles.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -112,6 +126,67 @@ export default async function ClientDetailPage({
                         <Trash2 className="size-4" />
                       </Button>
                     </form>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="perfis" className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              render={<Link href={`/perfis/novo?clientId=${client.id}`} />}
+              nativeButton={false}
+              variant="outline"
+              size="sm"
+            >
+              Cadastrar perfil manualmente
+            </Button>
+            <Button
+              render={<Link href="/descobrir-criadores/nova" />}
+              nativeButton={false}
+              variant="outline"
+              size="sm"
+            >
+              <UserSearch className="size-4" />
+              Descobrir novos criadores
+            </Button>
+          </div>
+
+          {client.referenceProfiles.length === 0 ? (
+            <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+              Nenhum perfil monitorado para este cliente ainda.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {client.referenceProfiles.map((profile) => (
+                <Card key={profile.id}>
+                  <CardContent className="pt-6">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <Link href={`/perfis/${profile.id}`} className="font-medium hover:underline">
+                        @{profile.handle}
+                      </Link>
+                      <a
+                        href={profile.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <ExternalLink className="size-3.5" />
+                      </a>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="text-[10px]">
+                        {networkLabels[profile.network]}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {frequencyLabels[profile.scrapeFrequency]}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {profile._count.contentPosts} posts coletados
+                    </p>
                   </CardContent>
                 </Card>
               ))}
