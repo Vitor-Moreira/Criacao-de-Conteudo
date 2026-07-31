@@ -68,16 +68,17 @@ model Organization {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  users              User[]
-  clients            Client[]
-  referenceProfiles  ReferenceProfile[]
-  contentPosts       ContentPost[]
-  contentIdeas       ContentIdea[]
-  marketResearches   MarketResearch[]
-  creatorDiscoveries CreatorDiscovery[]
-  collections        Collection[]
-  tags               Tag[]
-  usageLogs          UsageLog[]
+  users               User[]
+  clients             Client[]
+  referenceProfiles   ReferenceProfile[]
+  contentPosts        ContentPost[]
+  contentIdeas        ContentIdea[]
+  marketResearches    MarketResearch[]
+  creatorDiscoveries  CreatorDiscovery[]
+  contentImprovements ContentImprovement[]
+  collections         Collection[]
+  tags                Tag[]
+  usageLogs           UsageLog[]
 }
 
 model User {
@@ -94,12 +95,13 @@ model User {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  accounts        Account[]
-  sessions        Session[]
-  clientAccess    ClientAccess[]
-  contentIdeas    ContentIdea[]    @relation("IdeaCreatedBy")
-  generatedAssets GeneratedAsset[] @relation("AssetCreatedBy")
-  collections     Collection[]     @relation("CollectionCreatedBy")
+  accounts            Account[]
+  sessions            Session[]
+  clientAccess        ClientAccess[]
+  contentIdeas        ContentIdea[]        @relation("IdeaCreatedBy")
+  generatedAssets     GeneratedAsset[]     @relation("AssetCreatedBy")
+  collections         Collection[]         @relation("CollectionCreatedBy")
+  contentImprovements ContentImprovement[] @relation("ContentImprovementCreatedBy")
 
   @@index([organizationId])
 }
@@ -146,14 +148,15 @@ model Client {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  knowledgeItems     ClientKnowledgeItem[]
-  referenceProfiles  ReferenceProfile[]
-  contentIdeas       ContentIdea[]
-  generatedAssets    GeneratedAsset[]
-  marketResearches   MarketResearch[]
-  creatorDiscoveries CreatorDiscovery[]
-  collections        Collection[]
-  clientAccess       ClientAccess[]
+  knowledgeItems      ClientKnowledgeItem[]
+  referenceProfiles   ReferenceProfile[]
+  contentIdeas        ContentIdea[]
+  generatedAssets     GeneratedAsset[]
+  marketResearches    MarketResearch[]
+  creatorDiscoveries  CreatorDiscovery[]
+  contentImprovements ContentImprovement[]
+  collections         Collection[]
+  clientAccess        ClientAccess[]
 
   @@index([organizationId])
 }
@@ -406,6 +409,40 @@ model CreatorDiscovery {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([clientId])
+}
+
+// ─────────────────────────────────────────────────────
+// Melhoria de conteúdo (upload de texto/arquivo + sugestões da IA)
+// ─────────────────────────────────────────────────────
+
+enum ContentImprovementSourceType {
+  TEXT
+  PDF
+  DOCX
+  XLSX
+}
+
+model ContentImprovement {
+  id              String                       @id @default(cuid())
+  organizationId  String
+  clientId        String?
+  title           String
+  sourceType      ContentImprovementSourceType
+  originalFileUrl String?
+  originalText    String?                      @db.Text
+  analysis        String?                      @db.Text
+  improvedText    String?                      @db.Text
+  resultFileUrl   String?
+  errorMessage    String?                      @db.Text
+  createdById     String
+  createdAt       DateTime                     @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy    User         @relation("ContentImprovementCreatedBy", fields: [createdById], references: [id])
 
   @@index([organizationId])
   @@index([clientId])

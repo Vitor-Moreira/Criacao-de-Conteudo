@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, ExternalLink, UserSearch } from "lucide-react";
+import { Trash2, ExternalLink, UserSearch, FileEdit } from "lucide-react";
 import { networkLabels, frequencyLabels } from "@/lib/reference-profile-labels";
 
 export default async function ClientDetailPage({
@@ -33,6 +33,9 @@ export default async function ClientDetailPage({
       referenceProfiles: {
         orderBy: { createdAt: "desc" },
         include: { _count: { select: { contentPosts: true } } },
+      },
+      contentImprovements: {
+        orderBy: { createdAt: "desc" },
       },
     },
   });
@@ -65,6 +68,14 @@ export default async function ClientDetailPage({
             {client.referenceProfiles.length > 0 && (
               <Badge variant="secondary" className="ml-1.5">
                 {client.referenceProfiles.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="melhorias">
+            Análises de conteúdo
+            {client.contentImprovements.length > 0 && (
+              <Badge variant="secondary" className="ml-1.5">
+                {client.contentImprovements.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -187,6 +198,47 @@ export default async function ClientDetailPage({
                     <p className="mt-2 text-xs text-muted-foreground">
                       {profile._count.contentPosts} posts coletados
                     </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="melhorias" className="space-y-4">
+          <Button
+            render={<Link href="/melhorar-conteudo/nova" />}
+            nativeButton={false}
+            variant="outline"
+            size="sm"
+          >
+            <FileEdit className="size-4" />
+            Nova análise de conteúdo
+          </Button>
+
+          {client.contentImprovements.length === 0 ? (
+            <div className="flex h-32 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+              Nenhuma análise de conteúdo para este cliente ainda.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {client.contentImprovements.map((improvement) => (
+                <Card key={improvement.id}>
+                  <CardContent className="pt-6">
+                    <Link
+                      href={`/melhorar-conteudo/${improvement.id}`}
+                      className="font-medium hover:underline"
+                    >
+                      {improvement.title}
+                    </Link>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <Badge variant="outline" className="text-[10px]">
+                        {improvement.sourceType}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {improvement.createdAt.toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
